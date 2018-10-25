@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"  
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/tx
+    http://www.springframework.org/schema/tx/spring-tx.xsd
+    http://www.springframework.org/schema/task 
+	http://www.springframework.org/schema/task/spring-task.xsd
+	http://mybatis.org/schema/mybatis-spring 
+    http://mybatis.org/schema/mybatis-spring.xsd">
+
+	<!-- 配置外部文件 -->
+	<context:property-placeholder location="/WEB-INF/datasource/data-source.properties" ignore-unresolvable="true" />
+
+	<!-- 配置自动扫包 -->
+	<!-- Spring容器中注册非@Controller注解的Bean -->
+	<context:component-scan base-package="com.proper.material">
+		<!-- SpringMVC只负责@Controller注解的Bean的注册，所以@Controller注解的JAVA类不被扫描注册 -->
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+	
+	<task:annotation-driven />
+	
+	<!-- 配置数据源 -->
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="${jdbc.driver}"></property>
+		<property name="url" value="${jdbc.url}"></property>
+		<property name="username" value="${jdbc.username}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+	</bean>
+
+	<!-- 配置Spring和MyBatis整合，不需要mybatis的配置映射文件 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <!-- 自动扫描mapping.xml文件，**表示迭代查找 -->
+        <property name="mapperLocations" value="classpath:com/proper/material/**/*.xml" />
+    </bean>
+
+    <!-- 配置Mapper接口所在包名，Spring会自动查找其下的类 ，包下的类需要使用@MapperScan注解，否则容器注入会失败，如果需要配置过个接口所在包，需要用逗号隔开 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.proper.material.business.mapper" />
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+    </bean>
+
+	<!-- 配置事务管理 -->
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+	<!-- 定义个通知，指定事务管理器 -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="delete*" propagation="REQUIRED" read-only="false" rollback-for="java.lang.Exception" />
+			<tx:method name="save*" propagation="REQUIRED" read-only="false" rollback-for="java.lang.Exception" />
+			<tx:method name="insert*" propagation="REQUIRED" read-only="false" rollback-for="java.lang.Exception" />
+			<tx:method name="update*" propagation="REQUIRED" read-only="false" rollback-for="java.lang.Exception" />
+			<tx:method name="load*" propagation="SUPPORTS" read-only="true" />
+			<tx:method name="find*" propagation="SUPPORTS" read-only="true" />
+			<tx:method name="search*" propagation="SUPPORTS" read-only="true" />
+			<tx:method name="select*" propagation="SUPPORTS" read-only="true" />
+			<tx:method name="get*" propagation="SUPPORTS" read-only="true" />
+		</tx:attributes>
+	</tx:advice>
+	
+</beans>
